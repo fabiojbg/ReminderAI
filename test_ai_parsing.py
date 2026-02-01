@@ -13,7 +13,7 @@ def test_parsing():
     ai = AIHandler(api_key)
     
     test_cases = [
-        "remind me to take my medicine, starting tomorrow at 8am and repeat the same day of the week"
+        "remind me to take my medicine, starting tomorrow at 8am and repeat the same day of the week",
         "create a reminder to start at noon and repeat every 10 minutes to call to john",
         "remind me every 2 hours to walk the dog",
         "starting tomorrow at 8am remind me every day to take my medicine",

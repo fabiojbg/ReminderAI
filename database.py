@@ -52,3 +52,13 @@ class Database:
             cursor.execute('SELECT * FROM reminders WHERE id = ?', (reminder_id,))
             row = cursor.fetchone()
             return dict(row) if row else None
+
+    def update_reminder(self, reminder_id, text, trigger_type, trigger_time, recurring_params=None):
+        with sqlite3.connect(self.db_name) as conn:
+            cursor = conn.cursor()
+            cursor.execute('''
+                UPDATE reminders
+                SET text = ?, trigger_type = ?, trigger_time = ?, recurring_params = ?
+                WHERE id = ?
+            ''', (text, trigger_type, trigger_time, json.dumps(recurring_params) if recurring_params else None, reminder_id))
+            conn.commit()
