@@ -291,6 +291,9 @@ class ReminderApp(ctk.CTk):
         self.voice_btn = ctk.CTkButton(self.sidebar, text="🎤 Voice Reminder", command=self.toggle_voice_recording)
         self.voice_btn.pack(pady=10, padx=20)
 
+        self.status_label = ctk.CTkLabel(self.sidebar, text="", font=ctk.CTkFont(size=12))
+        self.status_label.pack(pady=0, padx=20)
+
         self.manual_btn = ctk.CTkButton(self.sidebar, text="➕ Manual Add", command=self.show_manual_add)
         self.manual_btn.pack(pady=10, padx=20)
 
@@ -377,16 +380,20 @@ class ReminderApp(ctk.CTk):
             self.recorder.start_recording()
         else:
             self.is_recording = False
-            self.voice_btn.configure(text="🎤 Voice Reminder", fg_color=["#3B8ED0", "#1F6AA5"])
+            self.voice_btn.configure(text="⌛ Processing...", state="disabled")
             path = self.recorder.stop_recording()
             if path:
                 threading.Thread(target=self.process_voice, args=(path,), daemon=True).start()
 
     def process_voice(self, path):
         try:
+            self.after(0, lambda: self.status_label.configure(text="Transcribing..."))
             text = self.ai.transcribe_audio(path)
+            
+            self.after(0, lambda: self.status_label.configure(text="AI Parsing..."))
             reminder_data = self.ai.parse_reminder(text)
             
+            self.after(0, lambda: self.status_label.configure(text="Saving..."))
             rid = self.db.add_reminder(
                 reminder_data['text'],
                 reminder_data['trigger_type'],
@@ -398,10 +405,14 @@ class ReminderApp(ctk.CTk):
             self.scheduler.add_reminder_job(reminder)
             
             self.after(0, self.refresh_reminder_list)
+            self.after(0, lambda: self.status_label.configure(text=""))
             self.after(0, lambda: messagebox.showinfo("Success", f"Reminder set: {reminder_data['text']}"))
         except Exception as e:
+            self.after(0, lambda: self.status_label.configure(text=""))
             self.after(0, lambda: messagebox.showerror("Error", str(e)))
         finally:
+            self.after(0, lambda: self.voice_btn.configure(text="🎤 Voice Reminder", state="normal", fg_color=["#3B8ED0", "#1F6AA5"]))
+            self.after(0, lambda: self.status_label.configure(text=""))
             self.recorder.delete_temp_file(path)
 
     def show_manual_add(self):
