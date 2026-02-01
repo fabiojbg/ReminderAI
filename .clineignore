@@ -1,0 +1,21 @@
+# python environment
+llmgateway/
+
+# Environments
+.env
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+Scripts/
+Lib/
+pyvenv.cfg
+Include/
+__pycache__/
+
+#project dirs to ignore
+logs/
+.trae/
+db/llmgateway_rotation.db

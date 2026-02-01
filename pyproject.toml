@@ -1,0 +1,18 @@
+[project]
+name = "reminder"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "apscheduler>=3.11.2",
+    "customtkinter>=5.2.2",
+    "numpy>=2.4.2",
+    "openai>=2.16.0",
+    "plyer>=2.1.0",
+    "pygame>=2.6.1",
+    "pystray>=0.19.5",
+    "python-dotenv>=1.2.1",
+    "scipy>=1.17.0",
+    "sounddevice>=0.5.5",
+]
