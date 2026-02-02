@@ -16,9 +16,16 @@ class Database:
                     trigger_type TEXT NOT NULL, -- 'one-time' or 'recurring'
                     trigger_time TEXT NOT NULL, -- ISO Format or specific time string
                     recurring_params TEXT,      -- JSON string for recurring options
-                    active INTEGER DEFAULT 1
+                    active INTEGER DEFAULT 1,
+                    last_dismissed_at TEXT
                 )
             ''')
+            
+            # Check if last_dismissed_at column exists (for existing databases)
+            cursor.execute("PRAGMA table_info(reminders)")
+            columns = [column[1] for column in cursor.fetchall()]
+            if 'last_dismissed_at' not in columns:
+                cursor.execute('ALTER TABLE reminders ADD COLUMN last_dismissed_at TEXT')
             conn.commit()
 
     def add_reminder(self, text, trigger_type, trigger_time, recurring_params=None):
@@ -61,4 +68,14 @@ class Database:
                 SET text = ?, trigger_type = ?, trigger_time = ?, recurring_params = ?
                 WHERE id = ?
             ''', (text, trigger_type, trigger_time, json.dumps(recurring_params) if recurring_params else None, reminder_id))
+            conn.commit()
+
+    def update_last_dismissed(self, reminder_id, dismiss_time):
+        with sqlite3.connect(self.db_name) as conn:
+            cursor = conn.cursor()
+            cursor.execute('''
+                UPDATE reminders
+                SET last_dismissed_at = ?
+                WHERE id = ?
+            ''', (dismiss_time, reminder_id))
             conn.commit()

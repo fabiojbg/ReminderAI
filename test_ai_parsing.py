@@ -13,10 +13,12 @@ def test_parsing():
     ai = AIHandler(api_key)
     
     test_cases = [
-        "remind me to take my medicine, starting tomorrow at 8am and repeat the same day of the week",
-        "create a reminder to start at noon and repeat every 10 minutes to call to john",
-        "remind me every 2 hours to walk the dog",
-        "starting tomorrow at 8am remind me every day to take my medicine",
+        "Lembre de consultar a contabilidade a partir das 10 horas da manhã da próxima segunda feira e repetir esse lembrete a cada uma hora.",
+        "Lembre de consultar a contabilidade a partir das 10 horas de amanhã e repetir esse lembrete a cada uma hora.",
+        # "remind me to take my medicine, starting tomorrow at 8am and repeat the same day of the week",
+        # "create a reminder to start at noon and repeat every 10 minutes to call to john",
+        # "remind me every 2 hours to walk the dog",
+        # "starting tomorrow at 8am remind me every day to take my medicine",
     ]
 
     for text in test_cases:

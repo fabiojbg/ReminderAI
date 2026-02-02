@@ -318,7 +318,19 @@ class ReminderApp(ctk.CTk):
 
         reminders = self.db.get_all_active_reminders()
         for r in reminders:
-            frame = ctk.CTkFrame(self.reminder_list)
+            # Check missed status
+            last_trigger = self.scheduler.get_last_theoretical_trigger(r)
+            is_missed = False
+            if last_trigger:
+                if not r.get('last_dismissed_at'):
+                    is_missed = True
+                else:
+                    last_dismissed = datetime.fromisoformat(r['last_dismissed_at'])
+                    if last_trigger > last_dismissed:
+                        is_missed = True
+
+            frame_color = "#3d1e1e" if is_missed else None # Subtle dark red for missed
+            frame = ctk.CTkFrame(self.reminder_list, fg_color=frame_color)
             frame.pack(fill="x", pady=5, padx=5)
             
             trigger_info = r['trigger_time'] if r['trigger_time'] else ""
@@ -341,7 +353,7 @@ class ReminderApp(ctk.CTk):
                 if params.get('start_time'):
                     try:
                         start_dt = datetime.fromisoformat(params['start_time'])
-                        trigger_info += f" (starting {start_dt.strftime('%Y-%m-%d')})"
+                        trigger_info += f" (starting {start_dt.strftime('%Y-%m-%d %H:%M')})"
                     except: pass
             else:
                 try:
@@ -349,8 +361,10 @@ class ReminderApp(ctk.CTk):
                     trigger_info = dt.strftime("%Y-%m-%d %H:%M")
                 except: pass
 
-            label_text = f"{r['text']}\n({trigger_info})"
-            ctk.CTkLabel(frame, text=label_text, justify="left", wraplength=400).pack(side="left", padx=10, pady=5)
+            missed_prefix = "⚠️ MISSED: " if is_missed else ""
+            label_text = f"{missed_prefix}{r['text']}\n({trigger_info})"
+            label_color = "#ff8888" if is_missed else None
+            ctk.CTkLabel(frame, text=label_text, justify="left", wraplength=400, text_color=label_color).pack(side="left", padx=10, pady=5)
             
             # Action Buttons Frame
             btn_frame = ctk.CTkFrame(frame, fg_color="transparent")
@@ -491,7 +505,12 @@ class ReminderApp(ctk.CTk):
         label = ctk.CTkLabel(popup, text=reminder['text'], font=ctk.CTkFont(size=14, weight="bold"), wraplength=250)
         label.pack(pady=30, padx=20)
         
-        close_btn = ctk.CTkButton(popup, text="Dismiss", command=popup.destroy)
+        def on_dismiss():
+            self.db.update_last_dismissed(reminder['id'], datetime.now().isoformat())
+            popup.destroy()
+            self.refresh_reminder_list()
+
+        close_btn = ctk.CTkButton(popup, text="Dismiss", command=on_dismiss)
         close_btn.pack(pady=10)
 
 if __name__ == "__main__":

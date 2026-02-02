@@ -4,7 +4,7 @@ Reminder AI Pro is a multiplatform Desktop application built with Python that le
 
 # Intructions
 
-Update this file whenever if necessary everytime the project is changed.
+Update this file whenever necessary, every time the project changes.
 
 ## 📁 File Tree
 
@@ -44,7 +44,7 @@ Reminder/
 
 ### 4. `database.py` (The Memory)
 - Simple SQLite wrapper to persist reminders.
-- Stores: `id`, `text`, `trigger_type`, `trigger_time`, `recurring_params` (as JSON), and `active` status.
+- Stores: `id`, `text`, `trigger_type`, `trigger_time`, `recurring_params` (as JSON), `active` status, and `last_dismissed_at`.
 
 ### 5. `voice_recorder.py` (The Ear)
 - Captures system audio input.
@@ -59,3 +59,4 @@ Reminder/
 5.  **Persistence**: The structured reminder is saved to `reminders.db`.
 6.  **Scheduling**: `scheduler_handler.py` creates a background job for the reminder.
 7.  **Trigger**: At the scheduled time, the app plays an `alert.wav` (if present), shows a system notification, and displays a popup.
+8.  **Missed Reminders**: If a reminder's last scheduled time is later than its `last_dismissed_at` time (or if never dismissed), it is highlighted as "MISSED" in the UI.

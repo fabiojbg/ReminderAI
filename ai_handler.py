@@ -32,7 +32,8 @@ class AIHandler:
 
         system_prompt = f"""
         You are a helpful assistant that parses natural language into a structured JSON for a reminder app.
-        Current time: {current_time} ({day_of_week}).
+        Current time: {current_time} ({day_of_week}). Format here is YYYY-MM-DD HH:MM:SS. 
+        Pay special attention to the current day and day of week to calculate requests like "tomorrow", "next Monday", etc.
 
         The JSON must follow this structure:
         {{
@@ -60,14 +61,15 @@ class AIHandler:
         """
 
         response = self.client.chat.completions.create(
-            model="gpt-4o-mini",
+            model="gpt-5-nano",
+            reasoning_effort="low",
             messages=[
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": text}
             ],
             response_format={"type": "json_object"}
         )
-
+        #print(f"--- Prompt: {system_prompt}")
         parsed_json = json.loads(response.choices[0].message.content)
         print(f"--- AI Parsed JSON: {json.dumps(parsed_json, indent=2)}")
         return parsed_json
