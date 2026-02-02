@@ -381,6 +381,22 @@ class ReminderApp(ctk.CTk):
         reminders = self.db.get_all_active_reminders()
         for r in reminders:
             self.scheduler.add_reminder_job(r)
+            
+            # Check if reminder was missed while app was closed
+            last_trigger = self.scheduler.get_last_theoretical_trigger(r)
+            if last_trigger:
+                is_missed = False
+                if not r.get('last_dismissed_at'):
+                    is_missed = True
+                else:
+                    last_dismissed = datetime.fromisoformat(r['last_dismissed_at'])
+                    if last_trigger > last_dismissed:
+                        is_missed = True
+                
+                if is_missed:
+                    print(f"Detected missed reminder on startup: {r['text']}")
+                    # Trigger after a small delay to let the app initialize
+                    self.after(1000, lambda rem=r: self.on_reminder_trigger(rem))
 
     def delete_reminder(self, rid):
         self.db.delete_reminder(rid)
@@ -467,13 +483,13 @@ class ReminderApp(ctk.CTk):
 
     def play_alert_sound(self):
         try:
-            # If a custom alert.wav exists, play it. Otherwise, generate a beep.
+            # If a custom alert.wav exists, play it.
             if os.path.exists("alert.wav"):
                 pygame.mixer.music.load("alert.wav")
                 pygame.mixer.music.play()
             else:
-                # Fallback to system beep if possible, or just skip
-                pass
+                # Fallback to system beep
+                self.bell()
         except Exception as e:
             print(f"Error playing sound: {e}")
 

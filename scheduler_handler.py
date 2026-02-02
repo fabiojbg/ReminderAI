@@ -13,16 +13,15 @@ class SchedulerHandler:
         self.scheduler.start()
 
     def add_reminder_job(self, reminder):
-        reminder_id = reminder['id']
-        text = reminder['text']
-        trigger_type = reminder['trigger_type']
-        trigger_time = reminder['trigger_time']
-        recurring_params = json.loads(reminder['recurring_params']) if reminder['recurring_params'] else None
+        try:
+            reminder_id = reminder['id']
+            trigger_type = reminder['trigger_type']
+            trigger_time = reminder['trigger_time']
+            recurring_params = json.loads(reminder['recurring_params']) if reminder['recurring_params'] else None
 
-        job_id = f"reminder_{reminder_id}"
+            job_id = f"reminder_{reminder_id}"
 
-        if trigger_type == 'one-time':
-            try:
+            if trigger_type == 'one-time':
                 run_date = datetime.fromisoformat(trigger_time)
                 if run_date > datetime.now():
                     self.scheduler.add_job(
@@ -32,63 +31,74 @@ class SchedulerHandler:
                         id=job_id,
                         replace_existing=True
                     )
-            except (ValueError, TypeError):
-                print(f"Invalid date format for reminder {reminder_id}")
+                else:
+                    print(f"Skipping scheduling for one-time reminder {reminder_id} as it is in the past.")
 
-        elif trigger_type == 'recurring':
-            interval = recurring_params.get('interval', 1)
-            start_date = None
-            if recurring_params.get('start_time'):
-                try:
-                    start_date = datetime.fromisoformat(recurring_params['start_time'])
-                except (ValueError, TypeError):
-                    pass
+            elif trigger_type == 'recurring':
+                interval = recurring_params.get('interval', 1)
+                start_date = None
+                if recurring_params.get('start_time'):
+                    try:
+                        start_date = datetime.fromisoformat(recurring_params['start_time'])
+                    except (ValueError, TypeError):
+                        pass
 
-            if recurring_params['type'] == 'minutely':
-                self.scheduler.add_job(
-                    self.trigger_callback,
-                    trigger=IntervalTrigger(minutes=interval, start_date=start_date),
-                    args=[reminder],
-                    id=job_id,
-                    replace_existing=True
-                )
-            elif recurring_params['type'] == 'hourly':
-                self.scheduler.add_job(
-                    self.trigger_callback,
-                    trigger=IntervalTrigger(hours=interval, start_date=start_date),
-                    args=[reminder],
-                    id=job_id,
-                    replace_existing=True
-                )
-            elif recurring_params['type'] == 'daily':
-                hour, minute = trigger_time.split(':')
-                self.scheduler.add_job(
-                    self.trigger_callback,
-                    trigger=CronTrigger(hour=hour, minute=minute, start_date=start_date),
-                    args=[reminder],
-                    id=job_id,
-                    replace_existing=True
-                )
-            elif recurring_params['type'] == 'weekly':
-                hour, minute = trigger_time.split(':')
-                day_of_week = recurring_params['day_of_week'].lower()[:3] # 'mon', 'tue', etc.
-                self.scheduler.add_job(
-                    self.trigger_callback,
-                    trigger=CronTrigger(day_of_week=day_of_week, hour=hour, minute=minute, start_date=start_date),
-                    args=[reminder],
-                    id=job_id,
-                    replace_existing=True
-                )
-            elif recurring_params['type'] == 'monthly':
-                hour, minute = trigger_time.split(':')
-                day = recurring_params['day_of_month']
-                self.scheduler.add_job(
-                    self.trigger_callback,
-                    trigger=CronTrigger(day=day, hour=hour, minute=minute, start_date=start_date),
-                    args=[reminder],
-                    id=job_id,
-                    replace_existing=True
-                )
+                rec_type = recurring_params.get('type')
+                if not rec_type:
+                    print(f"Missing recurrence type for reminder {reminder_id}")
+                    return
+
+                if rec_type == 'minutely':
+                    self.scheduler.add_job(
+                        self.trigger_callback,
+                        trigger=IntervalTrigger(minutes=interval, start_date=start_date),
+                        args=[reminder],
+                        id=job_id,
+                        replace_existing=True
+                    )
+                elif rec_type == 'hourly':
+                    self.scheduler.add_job(
+                        self.trigger_callback,
+                        trigger=IntervalTrigger(hours=interval, start_date=start_date),
+                        args=[reminder],
+                        id=job_id,
+                        replace_existing=True
+                    )
+                elif rec_type in ['daily', 'weekly', 'monthly']:
+                    if not trigger_time or ':' not in trigger_time:
+                        print(f"Invalid trigger_time format '{trigger_time}' for reminder {reminder_id}")
+                        return
+                        
+                    hour, minute = trigger_time.split(':')
+                    
+                    if rec_type == 'daily':
+                        self.scheduler.add_job(
+                            self.trigger_callback,
+                            trigger=CronTrigger(hour=hour, minute=minute, start_date=start_date),
+                            args=[reminder],
+                            id=job_id,
+                            replace_existing=True
+                        )
+                    elif rec_type == 'weekly':
+                        day_of_week = recurring_params['day_of_week'].lower()[:3]
+                        self.scheduler.add_job(
+                            self.trigger_callback,
+                            trigger=CronTrigger(day_of_week=day_of_week, hour=hour, minute=minute, start_date=start_date),
+                            args=[reminder],
+                            id=job_id,
+                            replace_existing=True
+                        )
+                    elif rec_type == 'monthly':
+                        day = recurring_params['day_of_month']
+                        self.scheduler.add_job(
+                            self.trigger_callback,
+                            trigger=CronTrigger(day=day, hour=hour, minute=minute, start_date=start_date),
+                            args=[reminder],
+                            id=job_id,
+                            replace_existing=True
+                        )
+        except Exception as e:
+            print(f"Error scheduling job for reminder {reminder.get('id')}: {e}")
 
     def remove_reminder_job(self, reminder_id):
         job_id = f"reminder_{reminder_id}"
