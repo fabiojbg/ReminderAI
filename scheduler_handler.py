@@ -80,7 +80,14 @@ class SchedulerHandler:
                             replace_existing=True
                         )
                     elif rec_type == 'weekly':
-                        day_of_week = recurring_params['day_of_week'].lower()[:3]
+                        days = recurring_params.get('days_of_week')
+                        if not days:
+                            # Fallback for old single day format
+                            days = [recurring_params.get('day_of_week')]
+                        
+                        # Convert to comma separated short names (mon,tue,...)
+                        day_of_week = ",".join([d.lower()[:3] for d in days if d])
+                        
                         self.scheduler.add_job(
                             self.trigger_callback,
                             trigger=CronTrigger(day_of_week=day_of_week, hour=hour, minute=minute, start_date=start_date),
@@ -170,15 +177,25 @@ class SchedulerHandler:
 
                 elif rec_type == 'weekly':
                     hour, minute = map(int, trigger_time.split(':'))
-                    target_weekday = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'].index(recurring_params['day_of_week'].lower())
+                    days = recurring_params.get('days_of_week')
+                    if not days:
+                        days = [recurring_params.get('day_of_week')]
                     
-                    # Find last occurrence of that weekday
-                    days_back = (now.weekday() - target_weekday) % 7
-                    theoretical = (now - timedelta(days=days_back)).replace(hour=hour, minute=minute, second=0, microsecond=0)
+                    weekdays = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday']
+                    target_weekdays = [weekdays.index(d.lower()) for d in days if d]
                     
-                    if theoretical > now:
-                        theoretical -= timedelta(days=7)
-                    return theoretical
+                    last_theoretical = None
+                    for target_weekday in target_weekdays:
+                        days_back = (now.weekday() - target_weekday) % 7
+                        theoretical = (now - timedelta(days=days_back)).replace(hour=hour, minute=minute, second=0, microsecond=0)
+                        
+                        if theoretical > now:
+                            theoretical -= timedelta(days=7)
+                        
+                        if last_theoretical is None or theoretical > last_theoretical:
+                            last_theoretical = theoretical
+                    
+                    return last_theoretical
 
                 elif rec_type == 'monthly':
                     hour, minute = map(int, trigger_time.split(':'))

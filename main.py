@@ -86,12 +86,15 @@ class ReminderDialog(ctk.CTkToplevel):
         self.time_entry = ctk.CTkEntry(self.recurring_frame, placeholder_text="08:00")
         self.time_entry.grid(row=5, column=0, sticky="ew", pady=(0, 10))
 
-        # Day of Week (for Weekly)
-        self.day_week_label = ctk.CTkLabel(self.recurring_frame, text="Day of Week:")
-        self.day_week_var = ctk.StringVar(value="Monday")
-        self.day_week_menu = ctk.CTkOptionMenu(self.recurring_frame, 
-                                               values=["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"],
-                                               variable=self.day_week_var)
+        # Day of Week (for Weekly) - Using Checkboxes for multiple selection
+        self.day_week_label = ctk.CTkLabel(self.recurring_frame, text="Days of Week:")
+        self.days_frame = ctk.CTkFrame(self.recurring_frame, fg_color="transparent")
+        self.day_vars = {}
+        for i, day in enumerate(["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]):
+            var = ctk.BooleanVar(value=False)
+            cb = ctk.CTkCheckBox(self.days_frame, text=day, variable=var)
+            cb.grid(row=i//2, column=i%2, sticky="w", pady=2, padx=5)
+            self.day_vars[day] = var
 
         # Day of Month (for Monthly)
         self.day_month_label = ctk.CTkLabel(self.recurring_frame, text="Day of Month (1-31):")
@@ -141,7 +144,7 @@ class ReminderDialog(ctk.CTkToplevel):
 
     def toggle_recurring_fields(self, val):
         self.day_week_label.grid_forget()
-        self.day_week_menu.grid_forget()
+        self.days_frame.grid_forget()
         self.day_month_label.grid_forget()
         self.day_month_entry.grid_forget()
         self.time_label.grid(row=4, column=0, sticky="w")
@@ -154,7 +157,7 @@ class ReminderDialog(ctk.CTkToplevel):
             self.time_entry.grid_forget()
         elif val == "weekly":
             self.day_week_label.grid(row=6, column=0, sticky="w")
-            self.day_week_menu.grid(row=7, column=0, sticky="ew", pady=(0, 10))
+            self.days_frame.grid(row=7, column=0, sticky="ew", pady=(0, 10))
             self.interval_label.grid_forget()
             self.interval_entry.grid_forget()
         elif val == "monthly":
@@ -186,9 +189,14 @@ class ReminderDialog(ctk.CTkToplevel):
             self.interval_entry.insert(0, str(params.get('interval', 1)))
             self.time_entry.insert(0, self.reminder_data.get('trigger_time', ''))
             
-            if params.get('day_of_week'):
-                self.day_week_var.set(params['day_of_week'])
-                self.day_week_menu.set(params['day_of_week'])
+            if params.get('days_of_week'):
+                for day in params['days_of_week']:
+                    if day in self.day_vars:
+                        self.day_vars[day].set(True)
+            elif params.get('day_of_week'): # Fallback
+                day = params['day_of_week']
+                if day in self.day_vars:
+                    self.day_vars[day].set(True)
             if params.get('day_of_month'):
                 self.day_month_entry.insert(0, str(params['day_of_month']))
             if params.get('start_time'):
@@ -232,7 +240,10 @@ class ReminderDialog(ctk.CTkToplevel):
                     recurring_params["start_time"] = start_dt.isoformat()
 
                 if rec_type == "weekly":
-                    recurring_params["day_of_week"] = self.day_week_var.get()
+                    selected_days = [day for day, var in self.day_vars.items() if var.get()]
+                    if not selected_days:
+                        raise ValueError("At least one day of the week required")
+                    recurring_params["days_of_week"] = selected_days
                 elif rec_type == "monthly":
                     day_m = self.day_month_entry.get().strip()
                     if not day_m: raise ValueError("Day of month required")
@@ -346,7 +357,11 @@ class ReminderApp(ctk.CTk):
                 elif recursive_type == 'daily':
                     trigger_info = f"every day at {r['trigger_time']}" if interval == 1 else f"every {interval} days at {r['trigger_time']}"
                 elif recursive_type == 'weekly':
-                    trigger_info = f"every {params.get('day_of_week')} at {r['trigger_time']}"
+                    days = params.get('days_of_week')
+                    if not days:
+                        days = [params.get('day_of_week')]
+                    days_str = ", ".join(days)
+                    trigger_info = f"every {days_str} at {r['trigger_time']}"
                 elif recursive_type == 'monthly':
                     trigger_info = f"every {params.get('day_of_month')}th at {r['trigger_time']}"
                 
