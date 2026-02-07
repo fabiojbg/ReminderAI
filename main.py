@@ -265,6 +265,92 @@ class ReminderDialog(ctk.CTkToplevel):
         }
         self.destroy()
 
+class SettingsDialog(ctk.CTkToplevel):
+    def __init__(self, parent):
+        super().__init__(parent)
+        self.title("Settings")
+        
+        # Center the dialog on screen
+        width, height = 500, 600
+        screen_width = self.winfo_screenwidth()
+        screen_height = self.winfo_screenheight()
+        x = (screen_width // 2) - (width // 2)
+        y = (screen_height // 2) - (height // 2)
+        self.geometry(f"{width}x{height}+{x}+{y}")
+
+        self.transient(parent)
+        self.grab_set()
+
+        self.result = None
+
+        self.grid_columnconfigure(0, weight=1)
+        self.grid_rowconfigure(0, weight=1)
+
+        self.scroll_frame = ctk.CTkScrollableFrame(self)
+        self.scroll_frame.grid(row=0, column=0, sticky="nsew", padx=20, pady=20)
+        self.scroll_frame.grid_columnconfigure(0, weight=1)
+
+        # General Section
+        ctk.CTkLabel(self.scroll_frame, text="General Settings", font=ctk.CTkFont(size=14, weight="bold")).grid(row=0, column=0, sticky="w", pady=(10, 5))       
+
+        # Chat Section
+        ctk.CTkLabel(self.scroll_frame, text="Chat Configuration", font=ctk.CTkFont(size=14, weight="bold")).grid(row=3, column=0, sticky="w", pady=(10, 5))
+        
+        ctk.CTkLabel(self.scroll_frame, text="Chat API Key (Optional):").grid(row=4, column=0, sticky="w")
+        self.chat_key_entry = ctk.CTkEntry(self.scroll_frame, show="*", placeholder_text="Defaults to primary key")
+        self.chat_key_entry.grid(row=5, column=0, sticky="ew", pady=(0, 10))
+        self.chat_key_entry.insert(0, os.getenv("CHAT_API_KEY", ""))
+
+        ctk.CTkLabel(self.scroll_frame, text="Chat Base URL (Optional):").grid(row=6, column=0, sticky="w")
+        self.chat_url_entry = ctk.CTkEntry(self.scroll_frame, placeholder_text="e.g. https://api.openai.com/v1")
+        self.chat_url_entry.grid(row=7, column=0, sticky="ew", pady=(0, 10))
+        self.chat_url_entry.insert(0, os.getenv("CHAT_BASE_URL", ""))
+
+        ctk.CTkLabel(self.scroll_frame, text="Chat Model:").grid(row=8, column=0, sticky="w")
+        self.chat_model_entry = ctk.CTkEntry(self.scroll_frame, placeholder_text="gpt-4o-mini")
+        self.chat_model_entry.grid(row=9, column=0, sticky="ew", pady=(0, 10))
+        self.chat_model_entry.insert(0, os.getenv("CHAT_MODEL", "gpt-4o-mini"))
+
+        # Transcription Section
+        ctk.CTkLabel(self.scroll_frame, text="Transcription Configuration", font=ctk.CTkFont(size=14, weight="bold")).grid(row=10, column=0, sticky="w", pady=(10, 5))
+        
+        ctk.CTkLabel(self.scroll_frame, text="Transcription API Key (Optional):").grid(row=11, column=0, sticky="w")
+        self.trans_key_entry = ctk.CTkEntry(self.scroll_frame, show="*", placeholder_text="Defaults to primary key")
+        self.trans_key_entry.grid(row=12, column=0, sticky="ew", pady=(0, 10))
+        self.trans_key_entry.insert(0, os.getenv("TRANSCRIPTION_API_KEY", ""))
+
+        ctk.CTkLabel(self.scroll_frame, text="Transcription Base URL (Optional):").grid(row=13, column=0, sticky="w")
+        self.trans_url_entry = ctk.CTkEntry(self.scroll_frame, placeholder_text="e.g. https://api.openai.com/v1")
+        self.trans_url_entry.grid(row=14, column=0, sticky="ew", pady=(0, 10))
+        self.trans_url_entry.insert(0, os.getenv("TRANSCRIPTION_BASE_URL", ""))
+
+        ctk.CTkLabel(self.scroll_frame, text="Transcription Model:").grid(row=15, column=0, sticky="w")
+        self.trans_model_entry = ctk.CTkEntry(self.scroll_frame, placeholder_text="whisper-1")
+        self.trans_model_entry.grid(row=16, column=0, sticky="ew", pady=(0, 10))
+        self.trans_model_entry.insert(0, os.getenv("TRANSCRIPTION_MODEL", "whisper-1"))
+
+        # Action Buttons
+        button_frame = ctk.CTkFrame(self, fg_color="transparent")
+        button_frame.grid(row=1, column=0, sticky="ew", padx=20, pady=(0, 20))
+        
+        self.save_btn = ctk.CTkButton(button_frame, text="Save Settings", command=self.on_save)
+        self.save_btn.pack(side="left", padx=5, expand=True, fill="x")
+        
+        self.cancel_btn = ctk.CTkButton(button_frame, text="Cancel", fg_color="gray", command=self.destroy)
+        self.cancel_btn.pack(side="right", padx=5, expand=True, fill="x")
+
+    def on_save(self):
+        self.result = {
+            "OPENAI_API_KEY": self.openai_key_entry.get().strip(),
+            "CHAT_API_KEY": self.chat_key_entry.get().strip(),
+            "CHAT_BASE_URL": self.chat_url_entry.get().strip(),
+            "CHAT_MODEL": self.chat_model_entry.get().strip(),
+            "TRANSCRIPTION_API_KEY": self.trans_key_entry.get().strip(),
+            "TRANSCRIPTION_BASE_URL": self.trans_url_entry.get().strip(),
+            "TRANSCRIPTION_MODEL": self.trans_model_entry.get().strip(),
+        }
+        self.destroy()
+
 class ReminderApp(ctk.CTk):
     def __init__(self):
         super().__init__()
@@ -483,17 +569,22 @@ class ReminderApp(ctk.CTk):
             self.refresh_reminder_list()
 
     def show_settings(self):
-        # We only ask for the primary/default key via UI for now. 
-        # Detailed provider config (Base URL, specific models) is managed via .env
-        api_key = tk.simpledialog.askstring("Settings", "Enter OpenAI API Key:", show='*')
-        if api_key:
-            self.ai.set_api_key(api_key)
-            # Safely update .env without overwriting other variables
+        dialog = SettingsDialog(self)
+        self.wait_window(dialog)
+        
+        if dialog.result:
             env_path = ".env"
             if not os.path.exists(env_path):
                 with open(env_path, "w") as f:
                     f.write("")
-            set_key(env_path, "OPENAI_API_KEY", api_key)
+            
+            for key, value in dialog.result.items():
+                set_key(env_path, key, value)
+            
+            # Reload environment and AI Handler config
+            load_dotenv(override=True)
+            self.ai.reload_config()
+            messagebox.showinfo("Success", "Settings updated successfully!")
 
     def on_reminder_trigger(self, reminder):
         print(f"TRIGGERED: {reminder['text']}")

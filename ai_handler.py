@@ -33,6 +33,22 @@ class AIHandler:
             base_url=self.trans_base_url if self.trans_base_url else None
         ) if self.trans_api_key else None
 
+    def reload_config(self):
+        """Reload configuration from environment variables and re-initialize clients"""
+        self.openai_default_key = os.getenv("OPENAI_API_KEY")
+        
+        # Chat Configuration
+        self.chat_api_key = os.getenv("CHAT_API_KEY") or self.openai_default_key
+        self.chat_base_url = os.getenv("CHAT_BASE_URL")
+        self.chat_model = os.getenv("CHAT_MODEL", "gpt-4o-mini")
+
+        # Transcription Configuration
+        self.trans_api_key = os.getenv("TRANSCRIPTION_API_KEY") or self.openai_default_key
+        self.trans_base_url = os.getenv("TRANSCRIPTION_BASE_URL")
+        self.trans_model = os.getenv("TRANSCRIPTION_MODEL", "whisper-1")
+
+        self._initialize_clients()
+
     def set_api_key(self, api_key):
         """Standard method to update the primary API key, resets specific ones if they were using defaults"""
         self.openai_default_key = api_key
