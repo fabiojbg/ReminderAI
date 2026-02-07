@@ -6,9 +6,6 @@ load_dotenv()
 
 def test_parsing():
     api_key = os.getenv("OPENAI_API_KEY")
-    if not api_key:
-        print("Error: OPENAI_API_KEY not found in .env")
-        return
 
     ai = AIHandler(api_key)
     

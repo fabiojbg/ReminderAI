@@ -9,7 +9,7 @@ from datetime import datetime, timedelta
 import threading
 import os
 import json
-from dotenv import load_dotenv
+from dotenv import load_dotenv, set_key
 from plyer import notification
 import pygame
 
@@ -483,12 +483,17 @@ class ReminderApp(ctk.CTk):
             self.refresh_reminder_list()
 
     def show_settings(self):
+        # We only ask for the primary/default key via UI for now. 
+        # Detailed provider config (Base URL, specific models) is managed via .env
         api_key = tk.simpledialog.askstring("Settings", "Enter OpenAI API Key:", show='*')
         if api_key:
             self.ai.set_api_key(api_key)
-            # Optionally save to .env or config file
-            with open(".env", "w") as f:
-                f.write(f"OPENAI_API_KEY={api_key}")
+            # Safely update .env without overwriting other variables
+            env_path = ".env"
+            if not os.path.exists(env_path):
+                with open(env_path, "w") as f:
+                    f.write("")
+            set_key(env_path, "OPENAI_API_KEY", api_key)
 
     def on_reminder_trigger(self, reminder):
         print(f"TRIGGERED: {reminder['text']}")

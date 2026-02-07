@@ -5,27 +5,61 @@ from datetime import datetime
 
 class AIHandler:
     def __init__(self, api_key=None):
-        self.client = OpenAI(api_key=api_key) if api_key else None
+        # Load configurations from environment or use defaults
+        self.openai_default_key = api_key or os.getenv("OPENAI_API_KEY")
+        
+        # Chat Configuration
+        self.chat_api_key = os.getenv("CHAT_API_KEY") or self.openai_default_key
+        self.chat_base_url = os.getenv("CHAT_BASE_URL") # Optional, defaults to OpenAI in the client
+        self.chat_model = os.getenv("CHAT_MODEL", "gpt-4o-mini")
+
+        # Transcription Configuration
+        self.trans_api_key = os.getenv("TRANSCRIPTION_API_KEY") or self.openai_default_key
+        self.trans_base_url = os.getenv("TRANSCRIPTION_BASE_URL") # Optional
+        self.trans_model = os.getenv("TRANSCRIPTION_MODEL", "whisper-1")
+
+        self._initialize_clients()
+
+    def _initialize_clients(self):
+        # Initialize Chat Client
+        self.chat_client = OpenAI(
+            api_key=self.chat_api_key,
+            base_url=self.chat_base_url if self.chat_base_url else None
+        ) if self.chat_api_key else None
+
+        # Initialize Transcription Client
+        self.trans_client = OpenAI(
+            api_key=self.trans_api_key,
+            base_url=self.trans_base_url if self.trans_base_url else None
+        ) if self.trans_api_key else None
 
     def set_api_key(self, api_key):
-        self.client = OpenAI(api_key=api_key)
+        """Standard method to update the primary API key, resets specific ones if they were using defaults"""
+        self.openai_default_key = api_key
+        
+        # Update specific keys ONLY if they weren't explicitly set in environment
+        if not os.getenv("CHAT_API_KEY"):
+            self.chat_api_key = api_key
+        if not os.getenv("TRANSCRIPTION_API_KEY"):
+            self.trans_api_key = api_key
+            
+        self._initialize_clients()
 
     def transcribe_audio(self, audio_file_path):
-        if not self.client:
-            raise ValueError("API Key not set")
+        if not self.trans_client:
+            raise ValueError("Transcription API Key not set")
         
         with open(audio_file_path, "rb") as audio_file:
-            transcript = self.client.audio.transcriptions.create(
-                model="whisper-1", 
+            transcript = self.trans_client.audio.transcriptions.create(
+                model=self.trans_model, 
                 file=audio_file,
-                # Whisper is proficient in PT and EN by default
             )
-        print(f"--- Transcription result: {transcript.text}")
+        print(f"--- Transcription result ({self.trans_model}): {transcript.text}")
         return transcript.text
 
     def parse_reminder(self, text):
-        if not self.client:
-            raise ValueError("API Key not set")
+        if not self.chat_client:
+            raise ValueError("Chat API Key not set")
 
         current_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         day_of_week = datetime.now().strftime("%A")
@@ -61,16 +95,14 @@ class AIHandler:
         Return ONLY the JSON.
         """
 
-        response = self.client.chat.completions.create(
-            model="gpt-5-nano",
-            reasoning_effort="low",
+        response = self.chat_client.chat.completions.create(
+            model=self.chat_model,
             messages=[
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": text}
             ],
             response_format={"type": "json_object"}
         )
-        #print(f"--- Prompt: {system_prompt}")
         parsed_json = json.loads(response.choices[0].message.content)
-        print(f"--- AI Parsed JSON: {json.dumps(parsed_json, indent=2)}")
+        print(f"--- AI Parsed JSON ({self.chat_model}): {json.dumps(parsed_json, indent=2)}")
         return parsed_json
