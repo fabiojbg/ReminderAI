@@ -101,6 +101,7 @@ class AIHandler:
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": text}
             ],
+            extra_body={ "provider":{"sort": "latency"}} if self.chat_base_url.__contains__("openrouter") else {},
             response_format={"type": "json_object"}
         )
         parsed_json = json.loads(response.choices[0].message.content)
