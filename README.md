@@ -39,11 +39,12 @@ Reminder AI Pro supports highly flexible AI configurations. You can use the prim
 
 | Variable | Description | Default |
 |----------|-------------|---------|
-| `OPENAI_API_KEY` | Primary API Key | - |
+| `CHAT_API_KEY` | API Key to LLM that interprets voice instructios | - |
 | `CHAT_MODEL` | Model for parsing reminders | `gpt-4o-mini` |
 | `CHAT_BASE_URL` | Custom endpoint for Chat (e.g., OpenRouter, Local LLM) | OpenAI |
+| `TRANSCRIPTION_API_KEY` | API Key to LLM that transcribes voice | - |
 | `TRANSCRIPTION_MODEL` | Model for voice transcription | `whisper-1` |
-| `TRANSCRIPTION_BASE_URL`| Custom endpoint for Transcription | OpenAI |
+| `TRANSCRIPTION_BASE_URL`| Custom endpoint for Voice Transcription | OpenAI |
 
 ## 🎤 Usage Examples
 Click **"🎤 Voice Reminder"** to start recording. Request examples:

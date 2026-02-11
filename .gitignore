@@ -148,3 +148,5 @@ data/
 cython_debug/
 *:Zone.Identifier
 reminders.db
+reminder.bat
+reminder.vbs
